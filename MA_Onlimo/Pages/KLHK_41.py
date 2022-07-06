@@ -76,11 +76,12 @@ option = st.selectbox('Parameter untuk dilihat data dan grafiknya', ('pH', 'DO',
 
 
 #empty chart
-c1, c2 = st.columns(2)
 with c1:
-    space_initial = st.empty()
+    if 'space_initial' not in st.session_state:
+        st.session_state.space_initial = st.empty()
 with c2:
-    space_initial_2 = st.empty()
+    if 'space_initial_2' not in st.session_state:
+        st.session_state.space_initial_2 = st.empty()
 
 #chart parameter
 pH = chart('pH', 'Date', df[-24:]['pH'], df[-24:]['tgl'], title= 'Grafik pH')
@@ -99,17 +100,17 @@ data_T0 = df[-24:][['tgl', 'TEMP']]
 #chart column
     
 if option == 'pH':
-    space_initial.write(pH)
-    space_initial_2.write(data_pH)
+    st.session_state.space_initial.space_initial.write(pH)
+    st.session_state.space_initial.space_initial_2.write(data_pH)
 elif option == 'DO':
-    space_initial.write(DO)
-    space_initial_2.write(data_DO)
+    st.session_state.space_initial.space_initial.write(DO)
+    st.session_state.space_initial.space_initial_2.write(data_DO)
 elif option == 'NH4':
-    space_initial.write(NH)
-    space_initial_2.write(data_NH)
+    st.session_state.space_initial.space_initial.write(NH)
+    st.session_state.space_initial.space_initial_2.write(data_NH)
 elif option == 'NO3':
-    space_initial.write(NO)
-    space_initial_2.write(data_NO)
+    st.session_state.space_initial.space_initial.write(NO)
+    st.session_state.space_initial.space_initial_2.write(data_NO)
 
 
 
@@ -135,7 +136,15 @@ if st.button('add input'):
     input_41 = pd.DataFrame(get_data_input())
     input_41.tail(1).to_csv('log_41.csv', mode='a', index = False, header = False)
 
-hasil = st.text_input(f'Hallo Iqbal, bagaimana hasilnya?')
+kasus = st.text_input(f'Apakah ada kasus di KLHK 41?')
+
+if st.button('add'):
+    get_data_input().append({'Tanggal Aksi': tgl_aksi, 'Aksi':kasus})
+    input_41 = pd.DataFrame(get_data_input())
+    input_41.tail(1).to_csv('log_41.csv', mode='a', index = False, header = False)
+
+    
+hasil = st.radio('Bagaimana hasilnya?', ('Pembacaan sensor normal', 'Pembacaan sensor masih anomali', 'Logger online kembali'))
 tgl_hasil = datetime.datetime.now()
 
 if st.button('add output'):
@@ -143,6 +152,8 @@ if st.button('add output'):
     hasil_41 = pd.DataFrame(get_data_output())
     hasil_41.tail(1).to_csv('log_hasil_41.csv', mode='a', index=False, header=False)
 
+
+    
     
 st.subheader('Datalog Aksi')
 st.write(pd.DataFrame(get_data_input()))
