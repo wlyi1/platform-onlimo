@@ -173,6 +173,21 @@ for i1,j2,z in zip(l_tab, name_param, posisi_param):
         else:
             st.error('Data Nitrat Anomali')
         
+        st.header(f'Jumlah Hari Anomali {j2}')
+        globals() [f'{j2}_arr'] = arr[:,:,z].flatten()
+        globals() [f'df_{j2}'] = data(globals() [f'{j2}_arr'])
+        globals() [f'status_{j2}'] = ml(globals() [f'df_{j2}'][2])
+
+        globals() [f'df_{j2}'][1]['Status'] = globals() [f'status_{j2}']
+        globals() [f'df_{j2}_st'] = globals() [f'df_{j2}'][1]['Status'].value_counts()
+        st.write(globals() [f'df_{j2}_st'])
+        st.subheader('Tanggal Data Sensor Anomali')
+        st.write(globals() [f'df_{j2}'][1]['TGL'].loc[globals() [f'df_{j2}'][1]['Status'] == 'Anomali'])
+
+
+        
+st.write(":heavy_minus_sign:" * 32)
+        
 
 
 
