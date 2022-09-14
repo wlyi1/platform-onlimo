@@ -4,9 +4,11 @@ import matplotlib.pyplot as plt
 import plotly.express as px
 import streamlit as st
 from matplotlib.widgets import CheckButtons
+from datetime import datetime, timedelta, date
+import datetime
 
 df49 = pd.read_csv('df49.csv')
-
+#st.write(df49)
 def chart(ylabel, xlabel, yvalues, xvalues, title=''):
     fig = px.line(x=xvalues, y=yvalues, labels={'x': xlabel, 'y': ylabel})
     return fig
@@ -30,35 +32,45 @@ alfa_val = [0,0,0,0]
 col1, col2, col3 = st.columns([1,1,1])
 
 with col1:
-    d1 = st.date_input('tanggal awal')
-    d2 = st.date_input('tanggal akhir')
+    d1 = st.date_input('Tanggal Awal', datetime.date(2022,1,2))
+    d2 = st.date_input('Tanggal Akhir' , datetime.date(2022,1,3))
     d3=d2-d1
     d3=d3.days
-    st.write(d3+1)
+    #st.write('d3', d3)
+    
     
 with col2:
-    param = st.radio('parameter:', ('pH', 'DO', 'COD', 'BOD', 'NH4', 'NO3', 'TEMP'))
+    param = st.radio('Parameter:', ('pH', 'DO', 'COD', 'BOD', 'NH4', 'NO3', 'TEMP'))
     arr_t = df49[param].to_numpy()
     arr_t = arr_t.reshape(47,4,6)
     #asumsi tanggal awal : 01-08-2022
-    i = d3
-
-    subuh = arr_t[0:i, 0, :].flatten()
-    pagi = arr_t[0:i, 1, :].flatten()
-    siang = arr_t[0:i, 2, :].flatten()
-    malam = arr_t[0:i, 3, :].flatten()
+    ref = datetime.date(2022,1,2)
+    ref_add = (d1 - ref).days
+    
+    i = ref_add + d3
+    x1 = d1
+    x2 = d2
+    #st.write(ref_add)
+    #st.write(i)
+    subuh = arr_t[ref_add:i, 0, :].flatten()
+    pagi = arr_t[ref_add:i, 1, :].flatten()
+    siang = arr_t[ref_add:i, 2, :].flatten()
+    malam = arr_t[ref_add:i, 3, :].flatten()
+    
+    #st.write(len(subuh))
 
     periode = [subuh,pagi,siang,malam]
-    x = [x for x in range(len(subuh))]
+    x = [x+1 for x in range(len(subuh))]
 
 with col3:
     st.write('periode waktu')
     #checkbox periode
     st_subuh = st.checkbox('Subuh')
-    st_pagi = st.checkbox('Pagi')
+    st_pagi = st.checkbox('Pagi', key='pagi')
     st_siang = st.checkbox('Siang')
     st_malam = st.checkbox('Malam')
     status_periode = [st_subuh, st_pagi, st_siang, st_malam]
+    
 
     if all(status_periode):
         for i in range(len(alfa_val)):
@@ -68,6 +80,7 @@ with col3:
         for i in range(len(alfa_val)):
             if status_periode[i] == 1:
                 alfa_val[i] = 1
+                
 suhu = charts(periode, x, alfa_val, 'Grafik Suhu Sungai Serang')
 st.write(suhu)    
 
