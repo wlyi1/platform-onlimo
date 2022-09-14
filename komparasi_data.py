@@ -1,17 +1,78 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import plotly.express as px
 import streamlit as st
 from matplotlib.widgets import CheckButtons
 from datetime import datetime, timedelta, date
 import datetime
+import pyodbc
+from sqlalchemy import create_engine, event
+from sqlalchemy.engine import URL
+from numpy import load
 
-df49 = pd.read_csv('df49.csv')
-#st.write(df49)
-def chart(ylabel, xlabel, yvalues, xvalues, title=''):
-    fig = px.line(x=xvalues, y=yvalues, labels={'x': xlabel, 'y': ylabel})
-    return fig
+data_24 = load('jam_24.npy', allow_pickle = True)
+df_nan = pd.read_csv('df_nan.csv')
+index = np.arange(1,25)
+df_test = pd.read_csv('testml.csv')
+
+
+conn_str = 'DRIVER={SQL Server};server=DESKTOP-ELAQ9RU\SQLEXPRESS;Database=awlr_mondylia;Trusted_Connection=yes;'
+con_url = URL.create('mssql+pyodbc', query={'odbc_connect': conn_str})
+engine = create_engine(con_url)
+
+#import data from SQL Server
+query = """select pH, DO, Cond, Turb, Temp, NH4,NO3,ORP,COD,BOD,TSS,logTime as NH3_N,logDate, datepart(hour, logTime) as logTime 
+from periodicdata where Station=12 order by logDate,logTime"""
+df = pd.read_sql(query, engine)
+df['logDate'] = pd.to_datetime(df['logDate']).dt.date
+
+
+#drop today data
+tgl = date.today()
+df = df.loc[df['logDate'] != tgl]
+df = df.loc[(df['logDate'] >= date.fromisoformat('2021-09-21'))]
+
+tanggal = np.unique(df['logDate'].values)
+j = len(tanggal)
+
+#array data daily
+arr = []
+
+for i in tanggal:
+    df_tgl = df.loc[df['logDate'] == i]
+
+    if not np.array_equiv(df_tgl['logTime'].values, data_24):
+        df_clean = df_tgl.drop_duplicates(subset='logTime', keep='last')
+        df_clean = pd.concat([df_clean, df_nan])
+        df_clean = df_clean.sort_values(by=['logTime'])
+        df_clean = df_clean.fillna(method='ffill').fillna(method='bfill')
+        df_clean = df_clean.drop_duplicates(subset='logTime', keep='last')
+        df_clean.drop(columns=df_clean.columns[-1], axis=1, inplace=True)
+        arr_clean = df_clean.to_numpy()
+        arr.append(arr_clean)
+
+    else:
+        arr_clean = df_tgl.to_numpy()
+        arr.append(arr_clean)
+
+arr = np.asarray(arr)
+
+cols = df.columns.values.tolist()
+arr_df = arr.reshape(7824,14)
+arr_df = pd.DataFrame(arr_df,  columns = cols)
+
+time_ind = arr_df.logTime.astype(int).astype(str)
+time_lis = []
+for i in time_ind:
+    if len(i) < 2:
+        i = '0' + i
+    time_lis.append(i)
+    
+df_index = pd.to_datetime(arr_df.logDate.astype(str) + ' ' + time_lis)    
+arr_df.set_index(df_index, inplace=True)
+arr_df = arr_df.asfreq(freq='H')
+arr_df = arr_df.fillna(0)
+data_arr = arr_df.to_numpy()
 
 def charts(y_series, xval, alfa, title=' '):
     
@@ -32,19 +93,20 @@ alfa_val = [0,0,0,0]
 col1, col2, col3 = st.columns([1,1,1])
 
 with col1:
-    d1 = st.date_input('Tanggal Awal', datetime.date(2022,1,2))
-    d2 = st.date_input('Tanggal Akhir' , datetime.date(2022,1,3))
+    d1 = st.date_input('Tanggal Awal', datetime.date(2021,9,21))
+    d2 = st.date_input('Tanggal Akhir' , datetime.date(2021,9,22))
     d3=d2-d1
     d3=d3.days
     #st.write('d3', d3)
     
     
 with col2:
-    param = st.radio('Parameter:', ('pH', 'DO', 'COD', 'BOD', 'NH4', 'NO3', 'TEMP'))
-    arr_t = df49[param].to_numpy()
-    arr_t = arr_t.reshape(47,4,6)
+    param = st.radio('Parameter:', ('pH', 'DO', 'COD', 'BOD', 'NH4', 'NO3', 'Temp'))
+    arr_t = arr_df[param].to_numpy()
+    arr_t = arr_t.reshape(337,4,6)
+    
     #asumsi tanggal awal : 01-08-2022
-    ref = datetime.date(2022,1,2)
+    ref = datetime.date(2021,9,21)
     ref_add = (d1 - ref).days
     
     i = ref_add + d3
@@ -81,7 +143,7 @@ with col3:
             if status_periode[i] == 1:
                 alfa_val[i] = 1
                 
-suhu = charts(periode, x, alfa_val, 'Grafik Suhu Sungai Serang')
+suhu = charts(periode, x, alfa_val, 'Grafik Suhu Sungai')
 st.write(suhu)    
 
     
